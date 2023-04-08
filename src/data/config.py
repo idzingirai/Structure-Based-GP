@@ -2,6 +2,7 @@
 RANDOM_STATE = 42
 
 #   process.py
+NUM_OF_FEATURES = 10
 THRESHOLD = 3           # For removing outliers
 SAMPLE_SIZE = 10000
 

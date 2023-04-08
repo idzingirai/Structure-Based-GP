@@ -4,8 +4,7 @@ import pandas as pd
 
 from sklearn.model_selection import train_test_split
 
-import data.config as config
-
+from data.config import RANDOM_STATE, TEST_SIZE
 from data.process import DataProcessor
 
 
@@ -28,5 +27,5 @@ class DataGetter:
 
         self.columns = x.columns
 
-        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=config.TEST_SIZE, random_state=config.RANDOM_STATE)
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=TEST_SIZE, random_state=RANDOM_STATE)
         return cp.asarray(x_train), cp.asarray(x_test), cp.asarray(y_train), cp.asarray(y_test)
