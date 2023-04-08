@@ -1,0 +1,7 @@
+pandas
+scipy
+scikit-learn
+pyarrow
+numpy
+numba
+cupy-cuda11x
