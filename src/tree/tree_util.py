@@ -108,19 +108,29 @@ def copy_tree(root: Node) -> Optional[Node]:
     return new_root
 
 
-def print_tree(root: Node) -> None:
-    if root is None:
-        return
+def get_tree_postfix_expr(root: Node) -> str:
+    stack = []
+    postfix = []
 
-    queue = deque([root])
-    while queue:
-        node = queue.popleft()
-        print(node.value, end=' ')
+    while True:
+        while root:
+            if root.right:
+                stack.append(root.right)
 
-        if node.left:
-            queue.append(node.left)
+            stack.append(root)
+            root = root.left
 
-        if node.right:
-            queue.append(node.right)
+        root = stack.pop()
 
-    print()
+        if root.right and stack and stack[-1] == root.right:
+            stack.pop()
+            stack.append(root)
+            root = root.right
+        else:
+            postfix.append(root.value)
+            root = None
+
+        if not stack:
+            break
+
+    return ' '.join(postfix)

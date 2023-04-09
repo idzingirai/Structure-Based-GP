@@ -1,5 +1,4 @@
 import os.path
-import cupy as cp
 import pandas as pd
 
 from sklearn.model_selection import train_test_split
@@ -28,4 +27,4 @@ class DataGetter:
         self.columns = x.columns
 
         x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=TEST_SIZE, random_state=RANDOM_STATE)
-        return cp.asarray(x_train), cp.asarray(x_test), cp.asarray(y_train), cp.asarray(y_test)
+        return x_train.to_numpy(), x_test.to_numpy(), y_train.to_numpy(), y_test.to_numpy()
