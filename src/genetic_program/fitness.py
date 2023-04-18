@@ -3,15 +3,16 @@ import types
 
 import numba
 import numpy as np
-from genetic_program.config import FITNESS_FUNCTION
 from numba import typed, types
 from sklearn.metrics import mean_squared_error, mean_absolute_error, median_absolute_error
-from tree.node import Node
-from tree.tree_util import get_tree_postfix_expr
+
+from src.genetic_program.config import FITNESS_FUNCTION
+from src.tree.node import Node
+from src.tree.tree_util import get_postfix
 
 
 @numba.njit
-def evaluate_postfix_string(row, expression):
+def evaluate(row, expression):
     tokens = expression.split()
     stack = typed.List.empty_list(types.float64)
     row = row.astype(np.float32)
@@ -29,11 +30,11 @@ def evaluate_postfix_string(row, expression):
             elif token == '-':
                 result = a - b
             elif token == '/':
-                if b == 0:
-                    result = 0
-                else:
+                if b != 0:
                     result = a / b
-            elif token == 'sqrt':
+                else:
+                    result = 0
+            else:
                 result = np.sqrt(abs(max(a, b)))
 
             stack.append(result)
@@ -46,12 +47,10 @@ def evaluate_postfix_string(row, expression):
 
 
 def calculate_fitness(tree: Node, x, y):
-    expr = get_tree_postfix_expr(tree)
+    expr = get_postfix(tree)
 
-    def fitness_evaluation(row):
-        return evaluate_postfix_string(row=row, expression=expr)
-
-    y_pred = np.apply_along_axis(fitness_evaluation, axis=1, arr=x)
+    fitness_evaluation = lambda row, expression: evaluate(row, expression)
+    y_pred = np.apply_along_axis(fitness_evaluation, axis=1, arr=x, expression=expr)
 
     if FITNESS_FUNCTION == 'RMSE':
         tree.fitness = np.sqrt(mean_squared_error(y, y_pred))

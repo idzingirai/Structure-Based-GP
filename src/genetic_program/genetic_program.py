@@ -2,6 +2,7 @@ import math
 from typing import List
 
 from src.genetic_program.config import *
+from src.genetic_program.fitness import calculate_fitness
 from src.tree.tree_generator import BinaryTreeGenerator
 from src.tree.tree_util import *
 
@@ -22,6 +23,8 @@ class GeneticProgram:
 
         #   For crossover and mutation
         self._max_tree_depth = MAX_TREE_DEPTH
+        self._crossover_probability = CROSSOVER_RATE
+        self._mutation_probability = MUTATION_RATE
 
         #   Data for the fitness function
         self._x_data = None
@@ -137,4 +140,22 @@ class GeneticProgram:
         population = self.generate_population()
 
         for tree in population:
-            tree.fitness = 0
+            calculate_fitness(tree=tree, x=self._x_data, y=self._y_data)
+
+        population.sort(key=lambda t: t.fitness)
+
+        first_tree = self.tournament_selection(population=population)
+        second_tree = self.tournament_selection(population=population)
+
+        if random.random() < self._crossover_probability:
+            self.crossover(first_tree=first_tree, second_tree=second_tree)
+
+        if random.random() < self._mutation_probability:
+            self.mutation(tree=first_tree)
+            self.mutation(tree=second_tree)
+
+        calculate_fitness(tree=first_tree, x=self._x_data, y=self._y_data)
+        calculate_fitness(tree=second_tree, x=self._x_data, y=self._y_data)
+
+        best_tree = first_tree if first_tree.fitness > second_tree.fitness else second_tree
+        return clone(best_tree) if best_tree.fitness > population[0].fitness else clone(population[0])

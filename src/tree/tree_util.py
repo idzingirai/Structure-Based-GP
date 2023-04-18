@@ -1,6 +1,6 @@
 import random
-from typing import Optional
 from collections import deque
+from typing import Optional
 
 from src.tree.node import Node
 
@@ -38,18 +38,13 @@ def get_depth(root: Node) -> int:
     return 1 + max(left_depth, right_depth)
 
 
-def get_postfix_expr(root: Node) -> str:
+def get_postfix(root: Node) -> str:
     """
     Get the postfix expression of a tree.
     :param root:
     :return: postfix expression of the tree in the form of a string
     """
-    postfix = []
-    if root:
-        postfix.extend(get_postfix_expr(root=root.left))
-        postfix.extend(get_postfix_expr(root=root.right))
-        postfix.append(str(root.value))
-    return ' '.join(postfix)
+    return '' if not root else get_postfix(root.left) + get_postfix(root.right) + root.value + ' '
 
 
 def count_nodes(root: Node) -> int:
