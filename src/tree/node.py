@@ -3,4 +3,4 @@ class Node:
         self.value: str = value
         self.left: Node = left
         self.right: Node = right
-        self.fitness: float = 0
+        self.fitness: float = 0.0

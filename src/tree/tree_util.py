@@ -1,26 +1,85 @@
+import random
 from typing import Optional
 from collections import deque
 
-from tree.node import Node
+from src.tree.node import Node
 
 
-def get_tree_depth(node: Node) -> int:
-    if node is None:
+def prune(root: Node, max_depth: int, terminal_set: list) -> Optional[Node]:
+    """
+    Prune a tree to a given depth.
+    :param root:
+    :param max_depth:
+    :param terminal_set:
+    :return: pruned tree
+    """
+    if root is None:
+        return None
+
+    if max_depth == 0:
+        return Node(random.choice(terminal_set))
+
+    root.left = prune(root=root.left, max_depth=max_depth - 1, terminal_set=terminal_set)
+    root.right = prune(root=root.right, max_depth=max_depth - 1, terminal_set=terminal_set)
+    return root
+
+
+def get_depth(root: Node) -> int:
+    """
+    Get the depth of a tree.
+    :param root:
+    :return: depth of the tree
+    """
+    if root is None:
         return 0
 
-    left_depth: int = get_tree_depth(node.left)
-    right_depth: int = get_tree_depth(node.right)
+    left_depth: int = get_depth(root.left)
+    right_depth: int = get_depth(root.right)
     return 1 + max(left_depth, right_depth)
 
 
-def get_number_of_nodes(root: Node) -> int:
+def get_postfix_expr(root: Node) -> str:
+    """
+    Get the postfix expression of a tree.
+    :param root:
+    :return: postfix expression of the tree in the form of a string
+    """
+    postfix = []
+    if root:
+        postfix.extend(get_postfix_expr(root=root.left))
+        postfix.extend(get_postfix_expr(root=root.right))
+        postfix.append(str(root.value))
+    return ' '.join(postfix)
+
+
+def count_nodes(root: Node) -> int:
+    """
+    Count the number of nodes in a tree.
+    :param root:
+    :return: number of nodes in the tree
+    """
+    return 0 if root is None else 1 + count_nodes(root=root.left) + count_nodes(root=root.right)
+
+
+def clone(root: Node) -> Optional[Node]:
+    """
+    Clone a tree.
+    :param root:
+    :return: cloned tree
+    """
     if root is None:
-        return 0
-    else:
-        return 1 + get_number_of_nodes(root.left) + get_number_of_nodes(root.right)
+        return None
+
+    return Node(root.value, clone(root=root.left), clone(root=root.right))
 
 
-def get_node_level_by_index(root: Node, index: int) -> int:
+def get_node_level(root: Node, index: int) -> int:
+    """
+    Get the level of a node in a tree.
+    :param root:
+    :param index:
+    :return:
+    """
     queue = deque([(root, 1)])
     count = 0
     level = 1
@@ -50,11 +109,11 @@ def get_node_level_by_index(root: Node, index: int) -> int:
     return -1
 
 
-def get_node_by_index(root: Node, index: int) -> Optional[Node]:
+def get_node(root: Node, index: int) -> Optional[Node]:
     if root is None:
         return None
 
-    height = get_tree_depth(root)
+    height = get_depth(root)
     max_index = 2 ** height - 1
     current_level = [root]
     level_index = 0
@@ -84,53 +143,3 @@ def get_node_by_index(root: Node, index: int) -> Optional[Node]:
             level_index = 0
 
     return None
-
-
-def copy_tree(root: Node) -> Optional[Node]:
-    if not root:
-        return None
-
-    new_root = Node(root.value)
-    queue = [(root, new_root)]
-
-    while queue:
-        node, new_node = queue.pop(0)
-
-        if node.left:
-            new_node.left = Node(node.left.value)
-            queue.append((node.left, new_node.left))
-
-        if node.right:
-            new_node.right = Node(node.right.value)
-            queue.append((node.right, new_node.right))
-
-    del queue
-    return new_root
-
-
-def get_tree_postfix_expr(root: Node) -> str:
-    stack = []
-    postfix = []
-
-    while True:
-        while root:
-            if root.right:
-                stack.append(root.right)
-
-            stack.append(root)
-            root = root.left
-
-        root = stack.pop()
-
-        if root.right and stack and stack[-1] == root.right:
-            stack.pop()
-            stack.append(root)
-            root = root.right
-        else:
-            postfix.append(root.value)
-            root = None
-
-        if not stack:
-            break
-
-    return ' '.join(postfix)

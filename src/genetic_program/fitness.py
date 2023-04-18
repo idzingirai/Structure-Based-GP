@@ -1,12 +1,11 @@
 import string
 import types
-import numpy as np
-import numba
 
+import numba
+import numpy as np
+from genetic_program.config import FITNESS_FUNCTION
 from numba import typed, types
 from sklearn.metrics import mean_squared_error, mean_absolute_error, median_absolute_error
-
-from genetic_program.config import FITNESS_FUNCTION
 from tree.node import Node
 from tree.tree_util import get_tree_postfix_expr
 
@@ -49,8 +48,10 @@ def evaluate_postfix_string(row, expression):
 def calculate_fitness(tree: Node, x, y):
     expr = get_tree_postfix_expr(tree)
 
-    fitness_evaluation = lambda row, expression: evaluate_postfix_string(row, expression)
-    y_pred = np.apply_along_axis(fitness_evaluation, axis=1, arr=x, expression=expr)
+    def fitness_evaluation(row):
+        return evaluate_postfix_string(row=row, expression=expr)
+
+    y_pred = np.apply_along_axis(fitness_evaluation, axis=1, arr=x)
 
     if FITNESS_FUNCTION == 'RMSE':
         tree.fitness = np.sqrt(mean_squared_error(y, y_pred))
