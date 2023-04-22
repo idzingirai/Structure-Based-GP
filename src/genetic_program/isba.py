@@ -3,9 +3,12 @@ from typing import List
 from src.tree.node import Node
 
 
-def calculate_gsim(individual: Node, local_optima: List[Node], rthresh: int, gthresh: int, d: int):
+def calculate_gsim(individual: Node, local_optima: List[Node], rthresh: float, gthresh: float, d: int):
+    if len(local_optima) == 0:
+        return False
+
     root_count = sum([1 for local_optimum in local_optima if local_optimum.value == individual.value])
-    if root_count > rthresh:
+    if root_count / len(local_optima) > rthresh:
         return True
 
     def compare_trees_up_to_depth_d(first_tree: Node, second_tree: Node, depth: int):
@@ -32,7 +35,7 @@ def calculate_gsim(individual: Node, local_optima: List[Node], rthresh: int, gth
 
     component_count = sum([1 for local_optimum in local_optima if
                            compare_trees_up_to_depth_d(first_tree=individual, second_tree=local_optimum, depth=d)])
-    return component_count > gthresh
+    return component_count / len(local_optima) > gthresh
 
 
 def get_relations(individual: Node):

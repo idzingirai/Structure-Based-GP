@@ -1,6 +1,6 @@
 import random
 from collections import deque
-from typing import Optional
+from typing import Optional, List
 
 from src.tree.node import Node
 
@@ -16,12 +16,20 @@ def prune(root: Node, max_depth: int, terminal_set: list) -> Optional[Node]:
     if root is None:
         return None
 
-    if max_depth == 0:
+    if max_depth == 1:
         return Node(random.choice(terminal_set))
 
     root.left = prune(root=root.left, max_depth=max_depth - 1, terminal_set=terminal_set)
     root.right = prune(root=root.right, max_depth=max_depth - 1, terminal_set=terminal_set)
     return root
+
+
+def get_leaf_with_parent(root: Node) -> List[tuple]:
+    """
+    Get the leaf nodes and the leaf node's parent.
+    :param root:
+    :return:
+    """
 
 
 def get_depth(root: Node) -> int:
@@ -58,14 +66,14 @@ def count_nodes(root: Node) -> int:
 
 def clone(root: Node) -> Optional[Node]:
     """
-    Clone a tree.
+    Clone a tree. and set its root fitness to to original root's fitness.
     :param root:
     :return: cloned tree
     """
     if root is None:
         return None
 
-    return Node(root.value, clone(root=root.left), clone(root=root.right))
+    return Node(root.value, clone(root=root.left), clone(root=root.right), fitness=root.fitness)
 
 
 def get_node_level(root: Node, index: int) -> int:
@@ -136,5 +144,25 @@ def get_node(root: Node, index: int) -> Optional[Node]:
         if level_index == len(current_level):
             current_level = current_level[level_index:]
             level_index = 0
+
+    return None
+
+
+def get_first_leaf_index(root: Node) -> int:
+    """
+    Get the index of the first leaf node in a tree using bfs.
+    :param root:
+    :return: index of the first leaf node
+    """
+    queue = [(root, 0)]
+
+    while queue:
+        node, index = queue.pop(0)
+        if not node.left and not node.right:
+            return index
+        if node.left:
+            queue.append((node.left, 2 * index + 1))
+        if node.right:
+            queue.append((node.right, 2 * index + 2))
 
     return None

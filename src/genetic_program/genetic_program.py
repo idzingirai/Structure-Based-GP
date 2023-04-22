@@ -1,8 +1,8 @@
 import math
-from typing import List
 
 from src.genetic_program.config import *
 from src.genetic_program.fitness import calculate_fitness
+from src.genetic_program.isba import calculate_gsim, calculate_lsim
 from src.tree.tree_generator import BinaryTreeGenerator
 from src.tree.tree_util import *
 
@@ -12,6 +12,10 @@ class GeneticProgram:
         #   global parameters
         self._tree_generator = BinaryTreeGenerator(terminal_set=terminal_set)
         self._terminal_set = terminal_set
+
+        #  For the algorithm
+        self._max_num_of_global_optima = 20
+        self._max_num_of_generations = MAX_GENERATIONS
 
         #   For generating the population
         self._population_size = POPULATION_SIZE
@@ -27,42 +31,79 @@ class GeneticProgram:
         self._mutation_probability = MUTATION_RATE
 
         #   Data for the fitness function
-        self._x_data = None
-        self._y_data = None
+        self._x = None
+        self._y = None
 
-    def set_data(self, x_data, y_data):
-        self._x_data = x_data
-        self._y_data = y_data
+    def set_data(self, x, y):
+        self._x = x
+        self._y = y
+
+    def generate_individual(self, depth: int) -> Node:
+        """
+        Generates a tree with depth d.
+        :param depth:
+        :return: root node of the tree
+        """
+        if self._tree_generation_method == 'RAMPED':
+            return self._tree_generator.full(depth=depth)
+        elif self._tree_generation_method == 'FULL':
+            return self._tree_generator.full(depth=depth)
+        else:
+            return self._tree_generator.grow(depth=depth)
+
+    def generate_individual_with_fixed_component(self, component, depth) -> Node:
+        """
+        Generates an individual with a fixed component.
+        :param component:
+        :param depth:
+        :return: root node of the tree
+        """
+        tree = clone(component)
+        mutation_point = get_first_leaf_index(tree)
+        individual = self.generate_individual(depth=depth)
+
+        mutation_point_parent_index = (mutation_point - 1) // 2
+        mutation_point_parent = get_node(root=tree, index=mutation_point_parent_index)
+
+        if mutation_point % 2 != 0:
+            mutation_point_parent.left = individual
+        else:
+            mutation_point_parent.right = individual
+
+        return tree
 
     def generate_population(self) -> List[Node]:
         """
-        Generates a population of trees based on the parameters set in the config file.
-        :return: a list of trees
+        Generates a population of trees.
+        :return: population of trees
         """
         population = []
         num_of_trees_at_each_level = math.floor(self._population_size / (self._initial_tree_depth - 1))
 
         for depth in range(2, self._initial_tree_depth + 1):
             for index in range(num_of_trees_at_each_level):
-                if self._tree_generation_method == 'RAMPED':
-                    population.append(self._tree_generator.ramped(depth=depth, index_on_level=index))
-                elif self._tree_generation_method == 'FULL':
-                    population.append(self._tree_generator.full(depth=depth))
-                else:
-                    population.append(self._tree_generator.grow(depth=depth))
+                population.append(self.generate_individual(depth=depth))
 
         return population
 
     def generate_population_with_fixed_component(self, component: Node) -> List[Node]:
         """
-        Generates a population of trees based on the parameters set in the config file.
-        :return: a list of trees
+        Generates a list of trees with a fixed component.
+        :param component:
+        :return: list of trees with a fixed component
         """
-        pass
+        population = []
+        num_of_trees_at_each_level = math.floor(self._population_size / (self._initial_tree_depth - 1))
+
+        for depth in range(2, self._initial_tree_depth + 1):
+            for index in range(num_of_trees_at_each_level):
+                population.append(self.generate_individual_with_fixed_component(component, depth))
+
+        return population
 
     def tournament_selection(self, population: list) -> Node:
         """
-        Selects a tree from the population using tournament selection.
+        Selects a tree from a sample of the population.
         :param population:
         :return: a randomly selected tree from the population
         """
@@ -72,7 +113,7 @@ class GeneticProgram:
 
     def crossover(self, first_tree: Node, second_tree: Node) -> None:
         """
-        Performs crossover on two trees.
+        Performs subtree crossover on two trees.
         :param first_tree:
         :param second_tree:
         :return: nothing
@@ -136,26 +177,164 @@ class GeneticProgram:
         else:
             mutation_point_parent.right = subtree
 
-    def run(self):
+    def global_run(self, local_optima: List[Node]) -> Node:
+        """
+        Performs a genetic programming run and returns the best tree found.
+        :return: the best tree found
+        """
+        # Generate initial population
         population = self.generate_population()
 
-        for tree in population:
-            calculate_fitness(tree=tree, x=self._x_data, y=self._y_data)
+        # Calculate fitness of each individual and remove those that are similar to local optima
+        for individual in population:
+            calculate_fitness(individual, self._x, self._y)
 
+            if calculate_gsim(individual, local_optima, 0.5, 0.5, 2) and individual.fitness < 3:
+                population.remove(individual)
+
+        # Sort population by fitness
         population.sort(key=lambda t: t.fitness)
 
-        first_tree = self.tournament_selection(population=population)
-        second_tree = self.tournament_selection(population=population)
+        # Save best tree
+        best_tree = clone(population[0])
 
+        # Run algorithm
+        num_of_generations = 0
+        while num_of_generations < self._max_num_of_generations:
+            #  Generate offspring by applying selection, crossover and mutation
+            first_tree, second_tree = self.generate_offspring(population)
+
+            # Calculate fitness of offspring
+            calculate_fitness(first_tree, self._x, self._y)
+            calculate_fitness(second_tree, self._x, self._y)
+
+            #  Added offspring to population if they are not similar to local optima
+            if not calculate_gsim(first_tree, local_optima, 0.5, 0.5, 2):
+                population.append(first_tree)
+
+            if not calculate_gsim(second_tree, local_optima, 0.5, 0.5, 2):
+                population.append(second_tree)
+
+            # Sort population by fitness
+            population.sort(key=lambda t: t.fitness)
+
+            # Remove the worst individuals
+            while len(population) > self._population_size:
+                population.pop()
+
+            # Update best tree
+            if population[0].fitness < best_tree.fitness:
+                best_tree = clone(population[0])
+
+            num_of_generations += 1
+
+        return best_tree
+
+    def generate_offspring(self, population):
+        """
+        Generates two offspring from the population.
+        :param population:
+        :return:
+        """
+        # Selection
+        first_tree = self.tournament_selection(population)
+        second_tree = self.tournament_selection(population)
+
+        # Crossover
         if random.random() < self._crossover_probability:
-            self.crossover(first_tree=first_tree, second_tree=second_tree)
+            self.crossover(first_tree, second_tree)
 
+        # Mutation
         if random.random() < self._mutation_probability:
-            self.mutation(tree=first_tree)
-            self.mutation(tree=second_tree)
+            self.mutation(first_tree)
+            self.mutation(second_tree)
 
-        calculate_fitness(tree=first_tree, x=self._x_data, y=self._y_data)
-        calculate_fitness(tree=second_tree, x=self._x_data, y=self._y_data)
+        return first_tree, second_tree
 
-        best_tree = first_tree if first_tree.fitness > second_tree.fitness else second_tree
-        return clone(best_tree) if best_tree.fitness > population[0].fitness else clone(population[0])
+    def is_similar(self, tree: Node, local_optima: List[Node]) -> bool:
+        """
+        Checks if a tree is similar to any of the local optima.
+        :param tree:
+        :param local_optima:
+        :return: True if the tree is similar to any of the local optima, False otherwise
+        """
+        for local_optimum in local_optima:
+            if calculate_lsim(tree, local_optimum, 3):
+                return True
+
+        return False
+
+    def local_run(self, local_optima: List[Node], fixed_component: Node) -> Optional[Node]:
+        """
+        Performs a genetic programming run and returns the best tree found.
+        :param local_optima:
+        :param fixed_component:
+        :return: node
+        """
+
+        # Generate initial population
+        population = self.generate_population_with_fixed_component(fixed_component)
+
+        # Calculate fitness of each individual and remove those that are similar to local optima
+        for individual in population:
+            calculate_fitness(individual, self._x, self._y)
+
+            if self.is_similar(individual, local_optima) and individual.fitness > 3:
+                population.remove(individual)
+
+        if len(population) == 0:
+            return None
+
+        if len(population) < self._tournament_size:
+            return population[0]
+
+        # Sort population by fitness
+        population.sort(key=lambda t: t.fitness)
+
+        # Save best tree
+        best_tree = clone(population[0])
+
+        # Run algorithm
+        num_of_generations = 0
+        while num_of_generations < self._max_num_of_generations:
+            #  Generate offspring by applying selection, crossover and mutation
+            first_tree, second_tree = self.generate_offspring(population)
+
+            # Calculate fitness of offspring
+            calculate_fitness(first_tree, self._x, self._y)
+            calculate_fitness(second_tree, self._x, self._y)
+
+            #  Added offspring to population if they are not similar to local optima
+            is_first_tree_similar = False
+            is_second_tree_similar = False
+
+            for local_optimum in local_optima:
+                if calculate_lsim(first_tree, local_optimum, 3):
+                    is_first_tree_similar = True
+                    break
+
+            for local_optimum in local_optima:
+                if calculate_lsim(second_tree, local_optimum, 3):
+                    is_second_tree_similar = True
+                    break
+
+            if not is_first_tree_similar:
+                population.append(first_tree)
+
+            if not is_second_tree_similar:
+                population.append(second_tree)
+
+            # Sort population by fitness
+            population.sort(key=lambda t: t.fitness)
+
+            # Remove the worst individuals
+            while len(population) > self._population_size:
+                population.pop()
+
+            # Update best tree
+            if population[0].fitness < best_tree.fitness:
+                best_tree = clone(population[0])
+
+            num_of_generations += 1
+
+        return best_tree
