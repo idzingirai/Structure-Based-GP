@@ -6,9 +6,9 @@ import numpy as np
 from numba import typed, types
 from sklearn.metrics import mean_squared_error, mean_absolute_error, median_absolute_error
 
-from src.genetic_program.config import FITNESS_FUNCTION
-from src.tree.node import Node
-from src.tree.tree_util import get_postfix
+from genetic_program.config import FITNESS_FUNCTION
+from tree.node import Node
+from tree.tree_util import get_postfix
 
 
 @numba.njit

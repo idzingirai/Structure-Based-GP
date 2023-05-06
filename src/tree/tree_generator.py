@@ -1,8 +1,8 @@
 import random
 
-from src.tree.config import FUNCTION_SET
-from src.tree.node import Node
-from src.tree.tree_util import get_depth
+from tree.config import FUNCTION_SET
+from tree.node import Node
+from tree.tree_util import get_depth
 
 
 class BinaryTreeGenerator:

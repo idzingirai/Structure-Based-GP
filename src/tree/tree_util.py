@@ -2,7 +2,7 @@ import random
 from collections import deque
 from typing import Optional, List
 
-from src.tree.node import Node
+from tree.node import Node
 
 
 def prune(root: Node, max_depth: int, terminal_set: list) -> Optional[Node]:

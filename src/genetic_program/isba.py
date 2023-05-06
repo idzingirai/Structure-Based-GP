@@ -1,6 +1,6 @@
 from typing import List
 
-from src.tree.node import Node
+from tree.node import Node
 
 
 def calculate_gsim(individual: Node, local_optima: List[Node], rthresh: float, gthresh: float, d: int):

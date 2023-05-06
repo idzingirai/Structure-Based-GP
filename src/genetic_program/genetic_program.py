@@ -1,10 +1,10 @@
 import math
 
-from src.genetic_program.config import *
-from src.genetic_program.fitness import calculate_fitness
-from src.genetic_program.isba import calculate_gsim, calculate_lsim
-from src.tree.tree_generator import BinaryTreeGenerator
-from src.tree.tree_util import *
+from genetic_program.config import *
+from genetic_program.fitness import calculate_fitness
+from genetic_program.isba import calculate_gsim, calculate_lsim
+from tree.tree_generator import BinaryTreeGenerator
+from tree.tree_util import *
 
 
 class GeneticProgram:
@@ -177,23 +177,32 @@ class GeneticProgram:
         else:
             mutation_point_parent.right = subtree
 
-    def global_run(self, local_optima: List[Node]) -> Node:
+    def global_run(self, local_optima: List[Node]) -> Optional[Node]:
         """
         Performs a genetic programming run and returns the best tree found.
         :return: the best tree found
         """
         # Generate initial population
         population = self.generate_population()
+        filtered_population = []
 
         # Calculate fitness of each individual and remove those that are similar to local optima
         for individual in population:
             calculate_fitness(individual, self._x, self._y)
 
-            if calculate_gsim(individual, local_optima, 0.5, 0.5, 2) and individual.fitness < 3:
-                population.remove(individual)
+            if not calculate_gsim(individual, local_optima, 0.5, 0.5, 2) or individual.fitness <= 3:
+                filtered_population.append(individual)
+
+        population = filtered_population
+
+        if len(population) == 0:
+            return None
 
         # Sort population by fitness
         population.sort(key=lambda t: t.fitness)
+
+        if len(population) <= self._tournament_size:
+            return clone(population[0])
 
         # Save best tree
         best_tree = clone(population[0])
@@ -274,22 +283,25 @@ class GeneticProgram:
 
         # Generate initial population
         population = self.generate_population_with_fixed_component(fixed_component)
+        filtered_population = []
 
         # Calculate fitness of each individual and remove those that are similar to local optima
         for individual in population:
             calculate_fitness(individual, self._x, self._y)
 
-            if self.is_similar(individual, local_optima) and individual.fitness > 3:
-                population.remove(individual)
+            if not self.is_similar(individual, local_optima) or individual.fitness <= 3:
+                filtered_population.append(individual)
+
+        population = filtered_population
 
         if len(population) == 0:
             return None
 
-        if len(population) < self._tournament_size:
-            return population[0]
-
         # Sort population by fitness
         population.sort(key=lambda t: t.fitness)
+
+        if len(population) <= self._tournament_size:
+            return clone(population[0])
 
         # Save best tree
         best_tree = clone(population[0])

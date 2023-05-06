@@ -4,12 +4,13 @@ import string
 import time
 
 from data.get_data import DataGetter
+from genetic_program.fitness import calculate_fitness
 from genetic_program.genetic_program import GeneticProgram
-from src.tree.tree_util import clone, prune
+from tree.tree_util import clone, prune
 
 if __name__ == '__main__':
     #   Seed the program
-    seed = 42
+    seed = 52
     random.seed(seed)
 
     unprocessed_file_path = os.path.join('../data/interim/For_modeling.csv')
@@ -43,54 +44,69 @@ if __name__ == '__main__':
         # Perform a run
         global_optimum = algorithm.global_run(global_optima)
 
-        # Check if the global optimum is good enough
-        if global_optimum.fitness < fitness_threshold:
-            best_solution = global_optimum
-            break
+        #   Check if global optimum is exists
+        if global_optimum is not None:
+            print("[] Global optimum fitness: ", global_optimum.fitness)
 
-        #   Add the global optimum to the list of global optima
-        global_optimum_clone = clone(global_optimum)
-        global_optima.append(global_optimum_clone)
-
-        #   Get the fixed component
-        fixed_component = prune(global_optimum_clone, 4, placeholder_variables)
-
-        #   Set the parameters for the local search
-        local_optima = []
-        num_of_local_areas_explored = 0
-        n = 5
-
-        while num_of_local_areas_explored < n:
-            #   Perform a run
-            local_optimum = algorithm.local_run(local_optima, fixed_component)
-
-            #   Check if local optimum is exists
-            if local_optimum is None:
-                continue
-
-            #   Check if the local optimum is good enough
-            if local_optimum.fitness < fitness_threshold:
-                best_solution = local_optimum
+            # Check if the global optimum is good enough
+            if global_optimum.fitness < fitness_threshold:
+                best_solution = global_optimum
                 break
 
-            #   Add the local optimum to the list of local optima
-            local_optimum_clone = clone(local_optimum)
-            local_optima.append(local_optimum_clone)
+            #   Add the global optimum to the list of global optima
+            global_optimum_clone = clone(global_optimum)
+            global_optima.append(global_optimum_clone)
 
-            if best_local_optimum is None or local_optimum.fitness < best_local_optimum.fitness:
-                best_local_optimum = local_optimum
+            #   Get the fixed component
+            fixed_component = prune(global_optimum_clone, 4, placeholder_variables)
 
-            #   Increment the number of local areas explored
-            num_of_local_areas_explored += 1
-            print("[] Local areas explored: ", num_of_local_areas_explored)
+            #   Set the parameters for the local search
+            local_optima = []
+            num_of_local_areas_explored = 0
+            n = 5
+
+            while num_of_local_areas_explored < n:
+                #   Perform a run
+                local_optimum = algorithm.local_run(local_optima, fixed_component)
+
+                #   Check if local optimum is exists
+                if local_optimum is not None:
+                    print("[] Local optimum fitness: ", local_optimum.fitness)
+
+                    #   Check if the local optimum is good enough
+                    if local_optimum.fitness < fitness_threshold:
+                        best_solution = local_optimum
+                        break
+
+                    #   Add the local optimum to the list of local optima
+                    local_optimum_clone = clone(local_optimum)
+                    local_optima.append(local_optimum_clone)
+
+                    if best_local_optimum is None or local_optimum.fitness < best_local_optimum.fitness:
+                        best_local_optimum = local_optimum
+
+                #   Increment the number of local areas explored
+                num_of_local_areas_explored += 1
+                print("[] Local areas explored: ", num_of_local_areas_explored)
 
         #   Increment the number of global areas explored
         num_of_global_areas_explored += 1
         print("[] Global areas explored: ", num_of_global_areas_explored)
 
-        if best_global_optimum is None or global_optimum.fitness < best_global_optimum.fitness:
+        if best_global_optimum is None or (
+                global_optimum is not None and global_optimum.fitness < best_global_optimum.fitness):
             best_global_optimum = global_optimum
 
     print("[] Best local fitness: ", best_local_optimum.fitness)
     print("[] Best global fitness: ", best_global_optimum.fitness)
+
+    if best_local_optimum.fitness < best_global_optimum.fitness:
+        best_solution = best_local_optimum
+    else:
+        best_solution = best_global_optimum
+
+    print("[] Best solution fitness: ", best_solution.fitness)
+
+    calculate_fitness(best_solution, x_test, y_test)
+    print("[] Best solution fitness on test set: ", best_solution.fitness)
     print(f"[] Time taken to get the data: {time.time() - start_time} seconds\n")

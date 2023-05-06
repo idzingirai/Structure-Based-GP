@@ -1,10 +1,9 @@
 import os.path
 
 import pandas as pd
+from data.config import RANDOM_STATE, TEST_SIZE
+from data.process import DataProcessor
 from sklearn.model_selection import train_test_split
-
-from src.data.config import RANDOM_STATE, TEST_SIZE
-from src.data.process import DataProcessor
 
 
 class DataGetter:
