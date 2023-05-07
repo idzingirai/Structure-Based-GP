@@ -1,17 +1,21 @@
 import os
 import random
 import string
+import sys
 import time
 
 from data.get_data import DataGetter
-from genetic_program.config import FITNESS_FUNCTION
+from genetic_program.config import FITNESS_FUNCTION, SEED
 from genetic_program.fitness import calculate_fitness
 from genetic_program.genetic_program import GeneticProgram
 from tree.tree_util import clone, prune, get_postfix
 
 if __name__ == '__main__':
     #   Seed the program
-    seed = 14986112
+    if len(sys.argv) < 2 or sys.argv[1] == 'None':
+        seed = SEED
+    else:
+        seed = sys.argv[1]
     print("[] Seed: ", seed)
     random.seed(seed)
 
