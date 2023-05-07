@@ -4,13 +4,15 @@ import string
 import time
 
 from data.get_data import DataGetter
+from genetic_program.config import FITNESS_FUNCTION
 from genetic_program.fitness import calculate_fitness
 from genetic_program.genetic_program import GeneticProgram
-from tree.tree_util import clone, prune
+from tree.tree_util import clone, prune, get_postfix
 
 if __name__ == '__main__':
     #   Seed the program
-    seed = 52
+    seed = 14986112
+    print("[] Seed: ", seed)
     random.seed(seed)
 
     unprocessed_file_path = os.path.join('../data/interim/For_modeling.csv')
@@ -23,6 +25,7 @@ if __name__ == '__main__':
     x_train, x_test, y_train, y_test = data_getter.get_data()
     selected_features = data_getter.get_selected_features()
     placeholder_variables = list(string.ascii_lowercase)[:len(selected_features)]
+    print("[] Selected Features: ", selected_features)
 
     # Instantiate the genetic program
     algorithm = GeneticProgram(placeholder_variables)
@@ -97,16 +100,21 @@ if __name__ == '__main__':
                 global_optimum is not None and global_optimum.fitness < best_global_optimum.fitness):
             best_global_optimum = global_optimum
 
-    print("[] Best local fitness: ", best_local_optimum.fitness)
-    print("[] Best global fitness: ", best_global_optimum.fitness)
+    print("\n[] Best Train Local Fitness: ", best_local_optimum.fitness)
+    print("[] Best Train Global Fitness: ", best_global_optimum.fitness)
 
     if best_local_optimum.fitness < best_global_optimum.fitness:
-        best_solution = best_local_optimum
+        if best_solution is None or (best_solution is not None and best_local_optimum.fitness < best_solution.fitness):
+            best_solution = best_local_optimum
     else:
-        best_solution = best_global_optimum
+        if best_solution is None or (best_solution is not None and best_global_optimum.fitness < best_solution.fitness):
+            best_solution = best_global_optimum
 
-    print("[] Best solution fitness: ", best_solution.fitness)
+    print("[] Best Train Fitness: ", best_solution.fitness)
+
+    expression = get_postfix(best_solution)
+    print("[] Best Tree Expression: ", expression)
 
     calculate_fitness(best_solution, x_test, y_test)
-    print("[] Best solution fitness on test set: ", best_solution.fitness)
+    print(f"[] Best Test Fitness ({FITNESS_FUNCTION}): {best_solution.fitness}")
     print(f"[] Time taken to get the data: {time.time() - start_time} seconds\n")
